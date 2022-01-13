@@ -58,7 +58,7 @@ namespace Helper
 		 * from ArgList: */
 		struct CompatibleArgCountHelper<Func, List<FirstArg, Args...>, false> :
 		CompatibleArgCount<Func, typename ListLeft<List<FirstArg, Args...>,
-		sizeof...(Args)>::value> {};
+		static_cast<int>(sizeof...(Args))>::value> {};
 
 	template<typename Func, typename ...Args>
 		struct CompatibleArgCount<Func, List<Args...>>
@@ -153,19 +153,19 @@ template<typename Func, typename Signal>
 struct AutoDisconnecter<Func, Signal, typename
 std::enable_if<Helper::FuncMeta<Func>::IsFunctor>::type>
 {
-	Func func;
+	typename std::remove_reference<Func>::type func;
 	std::shared_ptr<QMetaObject::Connection> connection;
 	mutable int remainingCalls = 1;
 
-	AutoDisconnecter(Func &&func, int fireCount = 1) :
-		func(std::forward<Func>(func)),
+	AutoDisconnecter(Func &&func_, int fireCount_ = 1) :
+		func(std::forward<Func>(func_)),
 		connection(std::make_shared<QMetaObject::Connection>()),
-		remainingCalls(fireCount)
+		remainingCalls(fireCount_)
 	{
 	}
 
 	template<typename ...Args>
-	void operator()(Args &&...args) const
+	void operator()(Args &&...args)
 	{
 		/* TODO: Figure out a better way of extracting n first arguments than
 		 * using a tuple and an integer sequence: */
@@ -189,7 +189,7 @@ std::enable_if<Helper::FuncMeta<Func>::IsFunctor>::type>
 	}
 
 	template<typename ...Args, int ...I>
-	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>) const
+	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>)
 	{
 		func(std::get<I>(tuple)...);
 	}
@@ -199,25 +199,25 @@ template<typename Func>
 struct AutoDisconnecter<Func, typename
 std::enable_if<!Helper::FuncMeta<Func>::IsFunctor>::type>
 {
-	Func func;
+	typename std::remove_reference<Func>::type func;
 	std::shared_ptr<QMetaObject::Connection> connection;
 	mutable int remainingCalls = 1;
 
-	AutoDisconnecter(Func &&func, int fireCount = 1) :
-		func(std::forward<Func>(func)),
+	AutoDisconnecter(Func &&func_, int fireCount_ = 1) :
+		func(std::forward<Func>(func_)),
 		connection(std::make_shared<QMetaObject::Connection>()),
-		remainingCalls(fireCount)
+		remainingCalls(fireCount_)
 	{
 	}
 
 	template<typename ...Args, int ...I>
-	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>) const
+	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>)
 	{
 		func(std::get<I>(tuple)...);
 	}
 
 	template<typename ...Args>
-	void operator()(Args &&...args) const
+	void operator()(Args &&...args)
 	{
 		/* TODO: Figure out a better way of extracting n first arguments than
 		 * using a tuple and an integer sequence: */
@@ -244,22 +244,22 @@ struct SlotAutoDisconnecter
 	std::shared_ptr<QMetaObject::Connection> connection;
 	mutable int remainingCalls = 1;
 
-	SlotAutoDisconnecter(Receiver *receiver, Slot &&slot, int fireCount = 1) :
-		receiver(receiver),
-		slot(std::forward<Slot>(slot)),
+	SlotAutoDisconnecter(Receiver *receiver_, Slot &&slot_, int fireCount_ = 1) :
+		receiver(receiver_),
+		slot(std::forward<Slot>(slot_)),
 		connection(std::make_shared<QMetaObject::Connection>()),
-		remainingCalls(fireCount)
+		remainingCalls(fireCount_)
 	{
 	}
 
 	template<typename ...Args, int ...I>
-	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>) const
+	void call(std::tuple<Args...>& tuple, Helper::Sequence<I...>)
 	{
 		(receiver->*slot)(std::get<I>(tuple)...);
 	}
 
 	template<typename ...Args>
-	void operator()(Args &&...args) const
+	void operator()(Args &&...args)
 	{
 		/* TODO: Figure out a better way of extracting n first arguments than
 		 * using a tuple and an integer sequence: */
@@ -354,4 +354,4 @@ QMetaObject::Connection connect(const Sender *sender, Signal signal, int callCou
 			disconnecter, type);
 }
 
-};
+}
